@@ -18,47 +18,54 @@ RUN echo "export PS1=\"\[\e[1;4;32m\]\u@\h:\[\e[m\]\[\e[1;33m\]\w\[\e[m\] \[\e[1
 RUN echo "alias x=exit"                                                                                                >> /etc/skel/.bashrc
 
 ## install basic packages
-RUN apt-get update -y
-RUN apt-get install -y \
+RUN sed -i 's@archive.ubuntu.com@ftp.jaist.ac.jp/pub/Linux@g' /etc/apt/sources.list \
+			&& apt-get update -y \
+			&& apt-get install -y software-properties-common \
+			&& apt-add-repository ppa:neovim-ppa/stable \
+			&& add-apt-repository ppa:apt-fast/stable \
+			&& apt-get update -y \
+			&& apt-get -y install apt-fast \
+			&& apt-fast clean
+RUN apt-fast install -y \
 			man-db           \
-		  ssh              \
-		  openssh-server   \
-		  ca-certificates  \
-		  rsync            \
-		  neovim           \
+			ssh              \
+			openssh-server   \
+			ca-certificates  \
+			rsync            \
+			neovim           \
 			xclip            \
-		  sudo             \
-		  curl             \
-		  screen           \
-		  cmake            \
-		  git              \
-		  finger
-RUN apt-get install -y \
-		  build-essential  \
-		  libboost-all-dev
-RUN apt-get install -y \
-		  python3-dev      \
-		  python3-pip      \
-		  python2-dev      \
-		  ruby-dev         \
-		  nodejs           \
-		  npm              \
-		  golang           \
-		  default-jre      \
-		  default-jdk
+			sudo             \
+			curl             \
+			screen           \
+			cmake            \
+			git              \
+			finger
+RUN apt-fast install -y \
+			build-essential  \
+			libboost-all-dev
+RUN apt-fast install -y \
+			python3-dev      \
+			python3-pip      \
+			python2-dev      \
+			ruby-dev         \
+			nodejs           \
+			npm              \
+			golang           \
+			default-jre      \
+			default-jdk
 RUN pip3 install    \
-		  numpy         \
-		  opencv-python \
-		  matplotlib    \
-		  torch
+			numpy         \
+			opencv-python \
+			matplotlib    \
+			torch         \
+			scikit-learn
 RUN gem install neovim
 RUN npm install -g neovim
 
 ## install gitlab-ce
 RUN curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | sudo bash
-#RUN sudo EXTERNAL_URL="https://gitlab.y0sshi316n.com" apt-get install gitlab-ce
-RUN sudo apt-get install -y gitlab-ce
-#RUN cat /etc/gitlab/initial_root_password
+RUN sudo EXTERNAL_URL="https://gitlab.y0sshi316n.com" apt-fast install gitlab-ce
+RUN cat /etc/gitlab/initial_root_password
 
 ## skel files
 COPY ./nvim /root/.config/nvim
