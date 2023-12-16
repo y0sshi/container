@@ -1,11 +1,11 @@
 ID_DockerHub = y0sshi316n
 DOCKERFILE   = ./Dockerfile
 IMAGE        = my-ubuntu
-TAG          = v0.2
+TAG          = focal
 
 build : $(DOCKERFILE)
-	docker image build ./ -t $(ID_DockerHub)/$(IMAGE):focal .
+	docker image build ./ -t $(ID_DockerHub)/$(IMAGE):$(TAG)
 
 run :
-	docker 
+	docker run -it --rm $(ID_DockerHub)/$(IMAGE):$(TAG)
 

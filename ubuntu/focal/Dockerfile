@@ -64,8 +64,9 @@ RUN npm install -g neovim
 
 ## install gitlab-ce
 RUN curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | sudo bash
-RUN sudo EXTERNAL_URL="https://gitlab.y0sshi316n.com" apt-fast install gitlab-ce
-RUN cat /etc/gitlab/initial_root_password
+#RUN sudo EXTERNAL_URL="https://gitlab.y0sshi316n.com" apt-fast install -y gitlab-ce
+RUN apt-fast install -y gitlab-ce
+#RUN cat /etc/gitlab/initial_root_password
 
 ## skel files
 COPY ./nvim /root/.config/nvim
