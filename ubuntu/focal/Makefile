@@ -9,3 +9,6 @@ build : $(DOCKERFILE)
 run :
 	docker run -it --rm $(ID_DockerHub)/$(IMAGE):$(TAG)
 
+clean :
+	docker image rm $(ID_DockerHub)/$(IMAGE):$(TAG)
+
