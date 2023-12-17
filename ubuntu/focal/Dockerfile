@@ -68,8 +68,12 @@ RUN curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/scrip
 RUN apt-fast install -y gitlab-ce
 #RUN cat /etc/gitlab/initial_root_password
 
-## skel files
+## NeoVim Settings
 COPY ./nvim /root/.config/nvim
+RUN nvim --headless \
+			-c "autocmd User PackerComplete quitall" \
+			-c "PackerSync"
 
 CMD ["/bin/bash"]
+
 
