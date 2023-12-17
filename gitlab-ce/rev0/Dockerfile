@@ -26,6 +26,7 @@ RUN apt-get install -y software-properties-common \
 			&& apt-get -y install apt-fast
 RUN apt-fast clean
 RUN apt-fast install -y \
+			vim \
 			curl \
 			openssh-server \
 			openssh-client \
@@ -35,15 +36,35 @@ RUN apt-fast install -y \
 			perl \
 			net-tools
 
-## install gitlab-ce
+## install and config gitlab-ce
 ARG GITLAB_EXTERNAL_URL=y0sshi316n
 RUN curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | bash
 RUN apt-fast install -y gitlab-ce
 RUN sed -i -e "s/\(^external_url 'http:\/\/gitlab.\)example\(.com'\)/\1${GITLAB_EXTERNAL_URL}\2/g" /etc/gitlab/gitlab.rb
 RUN sed -i -e "s/# \(package\['detect_init'\] = \)true/\1false/g" /etc/gitlab/gitlab.rb
-RUN echo "/opt/gitlab/embedded/bin/runsvdir-start &" >> /etc/rc.local
-RUN echo "/usr/bin/gitlab-ctl reconfigure" >> /etc/rc.local
-RUN echo "/usr/bin/gitlab-ctl restart" >> /etc/rc.local
+RUN sed -i -e "s/# \(gitlab_rails['gitlab_shell_git_timeout'] = 800\)/\1/" /etc/gitlab/gitlab.rb
 
-CMD ["/bin/bash"]
+## ssh settings
+RUN mkdir -p /var/run/sshd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+COPY ./config_files/authorized_keys /root/.ssh/authorized_keys
+
+## expose ports
+EXPOSE 22
+EXPOSE 80
+EXPOSE 443
+
+## start-up script
+RUN mkdir -p /work \
+			&& echo "#!/bin/bash" >> /work/run.sh \
+			&& echo "/usr/sbin/sshd -D &" >> /work/run.sh \
+			&& echo "/opt/gitlab/embedded/bin/runsvdir-start &" >> /work/run.sh \
+			&& echo "/usr/bin/gitlab-ctl reconfigure" >> /work/run.sh \
+			&& echo "/usr/bin/gitlab-ctl restart" >> /work/run.sh \
+			&& echo "echo \"$ /usr/bin/gitlab-ctl reconfigure && /usr/bin/gitlab-ctl restart -> done!!\"" >> /work/run.sh \
+			&& echo "tail -f /dev/null" >> /work/run.sh \
+			&& chmod +x /work/run.sh
+
+WORKDIR /work
+CMD ["./run.sh"]
 
