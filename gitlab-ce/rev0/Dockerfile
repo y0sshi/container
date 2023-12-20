@@ -20,12 +20,12 @@ RUN echo "alias x=exit"                                                         
 ## install basic packages
 RUN sed -i 's@archive.ubuntu.com@ftp.jaist.ac.jp/pub/Linux@g' /etc/apt/sources.list \
 			&& apt-get update -y
-RUN apt-get install -y software-properties-common \
+RUN apt-get install -y --no-install-recommends software-properties-common \
 			&& add-apt-repository ppa:apt-fast/stable \
 			&& apt-get update -y \
-			&& apt-get -y install apt-fast
+			&& apt-get install -y --no-install-recommends apt-fast
 RUN apt-fast clean
-RUN apt-fast install -y \
+RUN apt-fast install -y --no-install-recommends \
 			vim \
 			curl \
 			openssh-server \
@@ -34,25 +34,32 @@ RUN apt-fast install -y \
 			tzdata \
 			cron \
 			perl \
-			net-tools
+			net-tools \
+			netcat
 
 ## install and config gitlab-ce
-ARG GITLAB_EXTERNAL_URL=y0sshi316n
+ARG PORT_SSH=30022
+ARG PORT_HTTP=30080
+ARG PORT_HTTPS=30443
+ARG GITLAB_EXTERNAL_URL=y0sshi316n.diskstation.me:30080
 RUN curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | bash
-RUN apt-fast install -y gitlab-ce
-RUN sed -i -e "s/\(^external_url 'http:\/\/gitlab.\)example\(.com'\)/\1${GITLAB_EXTERNAL_URL}\2/g" /etc/gitlab/gitlab.rb
-RUN sed -i -e "s/# \(package\['detect_init'\] = \)true/\1false/g" /etc/gitlab/gitlab.rb
-RUN sed -i -e "s/# \(gitlab_rails['gitlab_shell_git_timeout'] = 800\)/\1/" /etc/gitlab/gitlab.rb
+RUN apt-fast install -y --no-install-recommends gitlab-ce
+RUN rm -rf /var/lib/apt/lists/*
+RUN sed -i -e "s/\(^external_url 'http:\/\/gitlab.\)example.com'/\1${GITLAB_EXTERNAL_URL}'/g" /etc/gitlab/gitlab.rb
+RUN sed -i -e "s/^# \(package\['detect_init'\] = \)true/\1false/g" /etc/gitlab/gitlab.rb
+RUN sed -i -e "s/^# \(gitlab_rails\['gitlab_shell_ssh_port'\] = \)22/\1${PORT_SSH}/" /etc/gitlab/gitlab.rb
+RUN sed -i -e "s/^# \(gitlab_rails\['gitlab_shell_git_timeout'\] = 800\)/\1/" /etc/gitlab/gitlab.rb
+
+## expose ports
+EXPOSE 30022
+EXPOSE 30080
+EXPOSE 30443
 
 ## ssh settings
 RUN mkdir -p /var/run/sshd
+RUN sed -i "s/^#Port 22/Port ${PORT_SSH}/" /etc/ssh/sshd_config
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
 COPY ./config_files/authorized_keys /root/.ssh/authorized_keys
-
-## expose ports
-EXPOSE 22
-EXPOSE 80
-EXPOSE 443
 
 ## start-up script
 RUN mkdir -p /work \
