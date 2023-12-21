@@ -1,0 +1,5 @@
+## ignore files
+/config_files/authorized_keys
+/config_files/cert.pem
+/config_files/privkey.pem
+

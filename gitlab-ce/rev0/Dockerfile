@@ -38,22 +38,41 @@ RUN apt-fast install -y --no-install-recommends \
 			netcat
 
 ## install and config gitlab-ce
-ARG PORT_SSH=30022
-ARG PORT_HTTP=30080
-ARG PORT_HTTPS=30443
-ARG GITLAB_EXTERNAL_URL=y0sshi316n.diskstation.me:30080
 RUN curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | bash
 RUN apt-fast install -y --no-install-recommends gitlab-ce
 RUN rm -rf /var/lib/apt/lists/*
-RUN sed -i -e "s/\(^external_url 'http:\/\/gitlab.\)example.com'/\1${GITLAB_EXTERNAL_URL}'/g" /etc/gitlab/gitlab.rb
+RUN mkdir -p /etc/gitlab/ssl
+COPY ./config_files/cert.pem    /etc/gitlab/ssl/cert.pem
+COPY ./config_files/privkey.pem /etc/gitlab/ssl/privkey.pem
+
+### arguments
+ARG PORT_SSH
+ARG PORT_HTTP
+ARG PORT_HTTPS
+ARG GITLAB_EXTERNAL_URL
+
 RUN sed -i -e "s/^# \(package\['detect_init'\] = \)true/\1false/g" /etc/gitlab/gitlab.rb
 RUN sed -i -e "s/^# \(gitlab_rails\['gitlab_shell_ssh_port'\] = \)22/\1${PORT_SSH}/" /etc/gitlab/gitlab.rb
 RUN sed -i -e "s/^# \(gitlab_rails\['gitlab_shell_git_timeout'\] = 800\)/\1/" /etc/gitlab/gitlab.rb
+RUN sed -i -e "s/^# \(gitlab_rails\['time_zone'\] = \)'UTC'/\1'Asia\/Tokyo'/" /etc/gitlab/gitlab.rb
+
+### HTTP-setting
+#RUN sed -i -e "s/^\(external_url \)'http:\/\/gitlab.example.com'/\1'${GITLAB_EXTERNAL_URL}:${PORT_HTTP}'/g" /etc/gitlab/gitlab.rb
+
+### HTTPS-setting
+RUN sed -i -e "s/^\(external_url \)'http:\/\/gitlab.example.com'/\1'${GITLAB_EXTERNAL_URL}:${PORT_HTTPS}'/g" /etc/gitlab/gitlab.rb
+RUN sed -i -e "s/^# \(letsencrypt\['enable'\] = \)nil/\1false/"                                     /etc/gitlab/gitlab.rb
+RUN sed -i -e "s/^# \(nginx\['redirect_http_to_https'\] = \)false/\1true/"                          /etc/gitlab/gitlab.rb
+RUN sed -i -e "s/^# \(nginx\['redirect_http_to_https_port'\] = 80\)/\1/"                            /etc/gitlab/gitlab.rb
+RUN sed -i -e "s/^# \(nginx\['ssl_certificate'\] = \).*/\1\"\/etc\/gitlab\/ssl\/cert.pem\"/"        /etc/gitlab/gitlab.rb
+RUN sed -i -e "s/^# \(nginx\['ssl_certificate_key'\] = \).*/\1\"\/etc\/gitlab\/ssl\/privkey.pem\"/" /etc/gitlab/gitlab.rb
+RUN echo "registry_nginx['redirect_http_to_https']   = true"                                     >> /etc/gitlab/gitlab.rb
+RUN echo "mattermost_nginx['redirect_http_to_https'] = true"                                     >> /etc/gitlab/gitlab.rb
 
 ## expose ports
-EXPOSE 30022
-EXPOSE 30080
-EXPOSE 30443
+EXPOSE 31022
+EXPOSE 31080
+EXPOSE 31443
 
 ## ssh settings
 RUN mkdir -p /var/run/sshd
@@ -63,13 +82,13 @@ COPY ./config_files/authorized_keys /root/.ssh/authorized_keys
 
 ## start-up script
 RUN mkdir -p /work \
-			&& echo "#!/bin/bash" >> /work/run.sh \
-			&& echo "/usr/sbin/sshd -D &" >> /work/run.sh \
-			&& echo "/opt/gitlab/embedded/bin/runsvdir-start &" >> /work/run.sh \
-			&& echo "/usr/bin/gitlab-ctl reconfigure" >> /work/run.sh \
-			&& echo "/usr/bin/gitlab-ctl restart" >> /work/run.sh \
+			&& echo "#!/bin/bash"                                                                         >> /work/run.sh \
+			&& echo "/usr/sbin/sshd -D &"                                                                 >> /work/run.sh \
+			&& echo "/opt/gitlab/embedded/bin/runsvdir-start &"                                           >> /work/run.sh \
+			&& echo "/usr/bin/gitlab-ctl reconfigure"                                                     >> /work/run.sh \
+			&& echo "/usr/bin/gitlab-ctl restart"                                                         >> /work/run.sh \
 			&& echo "echo \"$ /usr/bin/gitlab-ctl reconfigure && /usr/bin/gitlab-ctl restart -> done!!\"" >> /work/run.sh \
-			&& echo "tail -f /dev/null" >> /work/run.sh \
+			&& echo "tail -f /dev/null"                                                                   >> /work/run.sh \
 			&& chmod +x /work/run.sh
 
 WORKDIR /work
